@@ -1,0 +1,150 @@
+JSR reset
+
+:tile
+  JSR color             ;set color
+
+:draw
+  SET A, X
+  ADD A, 0x8000         ;Set a to graphic pointer
+  SET [A], C            ;output
+
+  ADD X, 1              ;move graphic pointer along
+
+
+  SET A, X              ;check for end of line
+  MOD A, 16 
+
+  IFE A, 0              ;move at end of row
+    JSR column
+
+  SET A, X              ;check for end of tile
+  MOD A, 2 
+
+  IFE A, 0
+    SET PC, tile        ;fill in next glyph (X+1)
+
+  SET PC, draw
+
+
+:column
+  ADD Y, 1              ;move column down one
+  AND X, 0xFFE0         ;set to start of column
+  ADD X, 0x0020         ;move down
+
+  IFE Y, 9              ;8 rows
+    SET PC, setupComplete
+  SET PC, POP
+
+:color
+  SET C, 0x0320         ;black
+  SET A, X 
+  DIV A, 2              ;compensate for drawing 2 glyphs per tile
+  ADD A, Y              ;alternate colors for columns
+  MOD A, 2 
+  IFE A, 0
+    SET C, 0x0f20       ;white
+  SET PC, POP
+
+:reset
+  SET C, 0              ;color
+  SET X, 0
+  SET Y, 0
+  SET A, 0
+  SET PC, POP
+
+:setCursor
+  SET C, 0x0520         ;cursor color
+  SET PC, POP
+
+:setupComplete
+  JSR reset             ;reset variables
+  JSR setCursor
+  SET [0x8000], C       ;init cursor (0x0)
+  SET [0x8001], C
+
+:begin
+  IFE [0x9000+I], 0     ;wait for input
+    SET PC, begin
+
+  SET B, [0x9000+I]     ;Get pressed key and set it to B register
+  SET [0x9000+I], 0     ;Reset the memory location for the keyboard input back to 0
+  ADD I, 1              ;Increment keyboard buffer index
+  IFE I, 16             ;Check for end of input buffer 
+    SET I, 0            ;Reset to 0 if it is
+
+  IFE B, 1              ;2 = right arrow
+    SET PC, leftPressed
+  IFE B, 2              ;1 = left arrow
+    SET PC, rightPressed
+  IFE B, 3              ;3 = up arrow
+    SET PC, upPressed
+  IFE B, 4              ;4 = down arrow
+    SET PC, downPressed
+
+  SET PC, begin         ;keep waiting
+
+
+:buttonPressed
+
+  JSR color             ;reset color of current tile
+  JSR drawTile
+  
+  JSR setCursor         ;move to next tile
+
+  IFE B, 1              ;move right
+    SUB X, 2
+  IFE B, 2              ;move left
+    ADD X, 2
+  IFE B, 3              ;move up
+    SUB X, 32
+  IFE B, 4              ;move down
+    ADD X, 32  
+
+  JSR drawTile
+
+  IFE B, 3              ;move up
+    SUB Y, 1
+  IFE B, 4              ;move down
+    ADD Y, 1
+  SET PC, begin
+
+:upPressed
+  IFE Y, 0
+    SET PC, begin
+
+  
+  JSR buttonPressed
+
+
+:downPressed
+  IFE Y, 8
+    SET PC, begin
+
+
+  JSR buttonPressed
+
+
+:leftPressed
+  SET A, X
+  MOD A, 32
+  IFE A, 0              ;prevent going off end of grid
+    SET PC, begin
+
+  JSR buttonPressed
+
+:rightPressed
+  SET A, X
+  MOD A, 32
+  IFE A, 14             ;prevent going off end of grid
+    SET PC, begin
+
+  JSR buttonPressed
+
+
+:drawTile
+  SET A, X
+  ADD A, 0x8000
+  SET [A], C
+  ADD A, 1
+  SET [A], C
+  SET PC, POP
