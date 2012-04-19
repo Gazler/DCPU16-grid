@@ -1,5 +1,10 @@
 JSR reset
 
+:left DAT 0x0025
+:right DAT 0x0027
+:up DAT 0x0026
+:down DAT 0x0028
+
 :tile
   JSR color             ;set color
 
@@ -50,6 +55,7 @@ JSR reset
   SET X, 0
   SET Y, 0
   SET A, 0
+  SET B, 0
   SET PC, POP
 
 :setCursor
@@ -71,14 +77,14 @@ JSR reset
   ADD I, 1              ;Increment keyboard buffer index
   IFE I, 16             ;Check for end of input buffer 
     SET I, 0            ;Reset to 0 if it is
-
-  IFE B, 1              ;2 = right arrow
+    
+  IFE B, [left]         ;1 = left arrow
     SET PC, leftPressed
-  IFE B, 2              ;1 = left arrow
+  IFE B, [right]        ;2 = right arrow
     SET PC, rightPressed
-  IFE B, 3              ;3 = up arrow
+  IFE B, [up]           ;3 = up arrow
     SET PC, upPressed
-  IFE B, 4              ;4 = down arrow
+  IFE B, [down]         ;4 = down arrow
     SET PC, downPressed
 
   SET PC, begin         ;keep waiting
@@ -91,20 +97,20 @@ JSR reset
   
   JSR setCursor         ;move to next tile
 
-  IFE B, 1              ;move right
+  IFE B, [left]         ;move left
     SUB X, 2
-  IFE B, 2              ;move left
+  IFE B, [right]        ;move right
     ADD X, 2
-  IFE B, 3              ;move up
+  IFE B, [up]           ;move up
     SUB X, 32
-  IFE B, 4              ;move down
+  IFE B, [down]          ;move down
     ADD X, 32  
 
   JSR drawTile
 
-  IFE B, 3              ;move up
+  IFE B, [up]            ;move up
     SUB Y, 1
-  IFE B, 4              ;move down
+  IFE B, [down]          ;move down
     ADD Y, 1
   SET PC, begin
 
